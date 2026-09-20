@@ -153,7 +153,7 @@ export default async (req: Request) => {
         trips,
         canEdit: Boolean(
           (env("KOYR_WRITE_URL") || env("GOOGLE_SCRIPT_URL")) &&
-          env("KOYR_MAKE_TOKEN")
+          (env("KOYR_WRITE_TOKEN") || env("KOYR_MAKE_TOKEN"))
         )
       });
     } catch (error) {
@@ -223,7 +223,7 @@ export default async (req: Request) => {
     }
 
     const editUrl = env("KOYR_WRITE_URL") || env("GOOGLE_SCRIPT_URL");
-    const makeToken = env("KOYR_MAKE_TOKEN");
+    const makeToken = env("KOYR_WRITE_TOKEN") || env("KOYR_MAKE_TOKEN");
 
     if (!editUrl || !makeToken) {
       return json({ ok: false, message: "Rettefunktionen er ikke konfigureret endnu." }, 503);
@@ -274,7 +274,7 @@ export default async (req: Request) => {
   }
 
   const scriptUrl = env("KOYR_WRITE_URL") || env("GOOGLE_SCRIPT_URL");
-  const makeToken = env("KOYR_MAKE_TOKEN");
+  const makeToken = env("KOYR_WRITE_TOKEN") || env("KOYR_MAKE_TOKEN");
 
   if (!scriptUrl || !makeToken) {
     return json({
