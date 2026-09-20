@@ -58,7 +58,8 @@
       line-height: 1.5;
     }
 
-    form {
+    form,
+    .registered {
       padding: 22px;
       background: rgba(255, 255, 255, 0.96);
       border: 1px solid rgba(23, 74, 126, 0.12);
@@ -140,6 +141,84 @@
       background: #fcecec;
     }
 
+    .registered {
+      margin-top: 18px;
+      padding: 18px 20px;
+    }
+
+    .registered-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .registered h2 {
+      margin: 0;
+      font-size: 1.08rem;
+    }
+
+    .refresh-button {
+      width: auto;
+      min-height: 38px;
+      margin: 0;
+      padding: 0 12px;
+      color: var(--blue);
+      background: var(--blue-soft);
+      box-shadow: none;
+      font-size: 0.82rem;
+    }
+
+    .refresh-button:hover {
+      color: #fff;
+      background: var(--blue);
+    }
+
+    .month-label {
+      margin: 5px 0 14px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      text-transform: capitalize;
+    }
+
+    .days-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .day-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 44px;
+      padding: 10px 12px;
+      background: #f5f8fb;
+      border: 1px solid #e4ebf1;
+      border-radius: 11px;
+    }
+
+    .day-date {
+      font-weight: 750;
+      text-transform: capitalize;
+    }
+
+    .day-count {
+      color: var(--success);
+      font-size: 0.88rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .days-message {
+      margin: 0;
+      padding: 8px 0 2px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .days-message.error { color: var(--error); }
+
     .note {
       margin: 18px 4px 0;
       color: var(--muted);
@@ -150,6 +229,7 @@
 
     @media (max-width: 390px) {
       form { padding: 18px; }
+      .registered { padding: 17px; }
       .route { grid-template-columns: 1fr; gap: 0; }
     }
   </style>
@@ -204,6 +284,17 @@
       <p id="status" class="status" role="status" aria-live="polite"></p>
     </form>
 
+    <section class="registered" aria-labelledby="registered-title">
+      <div class="registered-heading">
+        <h2 id="registered-title">Registrerede dage</h2>
+        <button id="refresh-button" class="refresh-button" type="button">Opdater</button>
+      </div>
+      <p id="month-label" class="month-label"></p>
+      <div id="registered-days" class="days-list" aria-live="polite">
+        <p class="days-message">Henter registreringer…</p>
+      </div>
+    </section>
+
     <p class="note">Du behøver ikke logge ind på Google.</p>
   </main>
 
@@ -214,6 +305,10 @@
     const toInput = document.querySelector("#to");
     const submitButton = document.querySelector("#submit-button");
     const statusBox = document.querySelector("#status");
+    const refreshButton = document.querySelector("#refresh-button");
+    const monthLabel = document.querySelector("#month-label");
+    const registeredDays = document.querySelector("#registered-days");
+    let loadedMonth = "";
 
     const faroeDate = new Intl.DateTimeFormat("en-CA", {
       timeZone: "Atlantic/Faroe",
@@ -222,7 +317,98 @@
       day: "2-digit"
     }).format(new Date());
 
+    const monthFormatter = new Intl.DateTimeFormat("da-DK", {
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC"
+    });
+
+    const dayFormatter = new Intl.DateTimeFormat("da-DK", {
+      weekday: "short",
+      day: "numeric",
+      month: "long",
+      timeZone: "UTC"
+    });
+
     dateInput.value = faroeDate;
+
+    function selectedMonth() {
+      return dateInput.value.slice(0, 7);
+    }
+
+    function monthDate(month) {
+      const [year, monthNumber] = month.split("-").map(Number);
+      return new Date(Date.UTC(year, monthNumber - 1, 1, 12));
+    }
+
+    function displayDate(date) {
+      return dayFormatter.format(new Date(date + "T12:00:00Z"));
+    }
+
+    function renderDays(days) {
+      registeredDays.replaceChildren();
+
+      if (!days.length) {
+        const message = document.createElement("p");
+        message.className = "days-message";
+        message.textContent = "Der er endnu ingen registrerede ture i denne måned.";
+        registeredDays.append(message);
+        return;
+      }
+
+      for (const day of days) {
+        const row = document.createElement("div");
+        row.className = "day-row";
+
+        const date = document.createElement("span");
+        date.className = "day-date";
+        date.textContent = displayDate(day.date);
+
+        const count = document.createElement("span");
+        count.className = "day-count";
+        count.textContent = "✓ " + day.count + (day.count === 1 ? " tur" : " ture");
+
+        row.append(date, count);
+        registeredDays.append(row);
+      }
+    }
+
+    async function loadRegisteredDays(force = false) {
+      const month = selectedMonth();
+
+      if (!month || (!force && month === loadedMonth)) {
+        return;
+      }
+
+      loadedMonth = month;
+      monthLabel.textContent = monthFormatter.format(monthDate(month));
+      registeredDays.innerHTML = '<p class="days-message">Henter registreringer…</p>';
+      refreshButton.disabled = true;
+
+      try {
+        const response = await fetch("/api/register-trip?month=" + encodeURIComponent(month), {
+          headers: { "Accept": "application/json" }
+        });
+        const result = await response.json();
+
+        if (!response.ok || !result.ok) {
+          throw new Error(result.message || "Oversigten kunne ikke hentes.");
+        }
+
+        renderDays(Array.isArray(result.days) ? result.days : []);
+      } catch (error) {
+        registeredDays.innerHTML = "";
+        const message = document.createElement("p");
+        message.className = "days-message error";
+        message.textContent = error.message || "Oversigten kunne ikke hentes.";
+        registeredDays.append(message);
+      } finally {
+        refreshButton.disabled = false;
+      }
+    }
+
+    dateInput.addEventListener("change", () => loadRegisteredDays());
+    refreshButton.addEventListener("click", () => loadRegisteredDays(true));
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -261,6 +447,7 @@
         if (!result.duplicate) {
           fromInput.value = "";
           toInput.value = "";
+          await loadRegisteredDays(true);
         }
       } catch (error) {
         statusBox.className = "status error";
@@ -270,6 +457,8 @@
         submitButton.textContent = "Gem tur";
       }
     });
+
+    loadRegisteredDays(true);
   </script>
 </body>
 </html>
