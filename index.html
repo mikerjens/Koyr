@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#174a7e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="koyr-version" content="2026.09.20.1">
-  <title>Koyr · Registrer arbejdsdag</title>
+  <meta name="koyr-version" content="2026.09.20.2">
+  <title>Koyr · Skráset arbeiðsdag</title>
   <style>
     :root {
       color-scheme: light;
@@ -314,11 +314,10 @@
   <main>
     <header>
       <div class="header-top">
-        <p class="eyebrow">Katrins arbejdsdage</p>
-        <button id="app-update-button" class="app-update-button" type="button">Opdater app</button>
+        <p class="eyebrow">Arbeiðsdagar</p>
+        <button id="app-update-button" class="app-update-button" type="button">Dagfør</button>
       </div>
-      <h1>Registrer en tur</h1>
-      <p class="intro">Udfyld dato, rute og bil. Turen gemmes direkte i arbejdsarket.</p>
+      <h1>Skráset túr</h1>
     </header>
 
     <form id="trip-form">
@@ -359,15 +358,15 @@
         </select>
       </div>
 
-      <button id="submit-button" type="submit">Gem tur</button>
+      <button id="submit-button" type="submit">Goym túr</button>
       <button id="cancel-button" class="cancel-button" type="button">Annuller rettelse</button>
       <p id="status" class="status" role="status" aria-live="polite"></p>
     </form>
 
     <section class="registered" aria-labelledby="registered-title">
       <div class="registered-heading">
-        <h2 id="registered-title">Registrerede dage</h2>
-        <button id="refresh-button" class="refresh-button" type="button">Opdater</button>
+        <h2 id="registered-title">Skrásettir túrar</h2>
+        <button id="refresh-button" class="refresh-button" type="button">Dagfør</button>
       </div>
       <p id="month-label" class="month-label"></p>
       <div id="registered-days" class="days-list" aria-live="polite">
@@ -418,7 +417,7 @@
 
     function reloadApp() {
       appUpdateButton.disabled = true;
-      appUpdateButton.textContent = "Opdaterer…";
+      appUpdateButton.textContent = "Dagførir…";
       window.location.replace("/?refresh=" + Date.now());
     }
 
@@ -431,7 +430,7 @@
 
         if (latest && current && latest !== current) {
           appUpdateButton.classList.add("update-available");
-          appUpdateButton.textContent = "Ny version klar";
+          appUpdateButton.textContent = "Nýggj útgáva klár";
         }
       } catch {
         // Appen kan stadig bruges uden versionskontrol, hvis telefonen er offline.
@@ -464,7 +463,7 @@
 
     function statusPresentation(value) {
       if (value === "Dokumenteret") {
-        return { className: "documented", text: "Tunnelpassage dokumenteret" };
+        return { className: "documented", text: "Tunnil góðkendur" };
       }
       if (value === "Ingen tunnel") {
         return { className: "no-tunnel", text: "Ingen tunnel nødvendig" };
@@ -478,7 +477,7 @@
       fromInput.value = trip.from;
       toInput.value = trip.to;
       document.querySelector("#car").value = trip.car;
-      submitButton.textContent = "Gem rettelse";
+      submitButton.textContent = "Goym broyting";
       cancelButton.style.display = "block";
       statusBox.className = "status";
       statusBox.textContent = "";
@@ -487,7 +486,7 @@
 
     function stopEditing() {
       editingTrip = null;
-      submitButton.textContent = "Gem tur";
+      submitButton.textContent = "Goym túr";
       cancelButton.style.display = "none";
     }
 
@@ -534,7 +533,7 @@
         statusBox.className = "status error";
         statusBox.textContent = error.message || "Registreringen kunne ikke slettes. Prøv igen.";
         button.disabled = false;
-        button.textContent = "Slet";
+        button.textContent = "Strika";
       }
     }
 
@@ -569,13 +568,13 @@
           const edit = document.createElement("button");
           edit.className = "edit-button";
           edit.type = "button";
-          edit.textContent = "Ret";
+          edit.textContent = "Broyt";
           edit.addEventListener("click", () => beginEdit(trip));
 
           const remove = document.createElement("button");
           remove.className = "delete-button";
           remove.type = "button";
-          remove.textContent = "Slet";
+          remove.textContent = "Strika";
           remove.addEventListener("click", () => deleteTrip(trip, remove));
 
           actions.append(edit, remove);
@@ -659,7 +658,7 @@
       }
 
       submitButton.disabled = true;
-      submitButton.textContent = "Gemmer…";
+      submitButton.textContent = "Goymir…";
 
       try {
         const response = await fetch("/api/register-trip", {
@@ -692,7 +691,7 @@
         statusBox.textContent = error.message || "Turen kunne ikke gemmes. Prøv igen.";
       } finally {
         submitButton.disabled = false;
-        submitButton.textContent = editingTrip ? "Gem rettelse" : "Gem tur";
+        submitButton.textContent = editingTrip ? "Goym broyting" : "Goym túr";
       }
     });
 
