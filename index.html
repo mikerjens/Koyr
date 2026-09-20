@@ -223,7 +223,13 @@
     .trip-status.check { color: var(--error); }
     .trip-status.no-tunnel { color: var(--muted); }
 
+    .day-actions {
+      display: flex;
+      gap: 7px;
+    }
+
     .edit-button,
+    .delete-button,
     .cancel-button {
       width: auto;
       min-height: 36px;
@@ -231,6 +237,16 @@
       padding: 0 12px;
       box-shadow: none;
       font-size: 0.82rem;
+    }
+
+    .delete-button {
+      color: #9f2929;
+      background: #fcecec;
+    }
+
+    .delete-button:hover {
+      color: #fff;
+      background: #b83232;
     }
 
     .cancel-button {
@@ -417,6 +433,53 @@
       cancelButton.style.display = "none";
     }
 
+    async function deleteTrip(trip, button) {
+      const confirmed = window.confirm(
+        "Vil du slette turen " + displayDate(trip.date) + " fra " + trip.from + " til " + trip.to + "?"
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      button.disabled = true;
+      button.textContent = "Sletter…";
+      statusBox.className = "status";
+      statusBox.textContent = "";
+
+      try {
+        const response = await fetch("/api/register-trip", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            row: trip.row,
+            date: trip.date,
+            from: trip.from,
+            to: trip.to,
+            car: trip.car
+          })
+        });
+        const result = await response.json();
+
+        if (!response.ok || !result.ok || !result.deleted) {
+          throw new Error(result.message || "Registreringen kunne ikke slettes.");
+        }
+
+        if (editingTrip && editingTrip.row === trip.row) {
+          stopEditing();
+        }
+
+        statusBox.className = "status success";
+        statusBox.textContent = "Registreringen er slettet.";
+        await loadRegisteredDays(true);
+      } catch (error) {
+        statusBox.className = "status error";
+        statusBox.textContent = error.message || "Registreringen kunne ikke slettes. Prøv igen.";
+        button.disabled = false;
+        button.textContent = "Slet";
+      }
+    }
+
     function renderTrips(trips) {
       registeredDays.replaceChildren();
 
@@ -442,12 +505,23 @@
         top.append(date);
 
         if (editingEnabled) {
+          const actions = document.createElement("div");
+          actions.className = "day-actions";
+
           const edit = document.createElement("button");
           edit.className = "edit-button";
           edit.type = "button";
           edit.textContent = "Ret";
           edit.addEventListener("click", () => beginEdit(trip));
-          top.append(edit);
+
+          const remove = document.createElement("button");
+          remove.className = "delete-button";
+          remove.type = "button";
+          remove.textContent = "Slet";
+          remove.addEventListener("click", () => deleteTrip(trip, remove));
+
+          actions.append(edit, remove);
+          top.append(actions);
         }
 
         const details = document.createElement("div");

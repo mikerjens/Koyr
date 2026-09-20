@@ -116,7 +116,7 @@ async function readSheetRows() {
 }
 
 export default async (req: Request) => {
-  if (req.method !== "GET" && req.method !== "POST" && req.method !== "PUT") {
+  if (req.method !== "GET" && req.method !== "POST" && req.method !== "PUT" && req.method !== "DELETE") {
     return json({ ok: false, message: "Metoden er ikke tilladt." }, 405);
   }
 
@@ -196,12 +196,12 @@ export default async (req: Request) => {
     return json({ ok: false, message: "Vælg en gyldig bil." }, 400);
   }
 
-  if (req.method === "PUT") {
+  if (req.method === "PUT" || req.method === "DELETE") {
     const row = Number(payload.row);
-    const originalDate = String(payload.originalDate || "").trim();
-    const originalFrom = String(payload.originalFrom || "").trim();
-    const originalTo = String(payload.originalTo || "").trim();
-    const originalCar = String(payload.originalCar || "").trim();
+    const originalDate = req.method === "DELETE" ? date : String(payload.originalDate || "").trim();
+    const originalFrom = req.method === "DELETE" ? from : String(payload.originalFrom || "").trim();
+    const originalTo = req.method === "DELETE" ? to : String(payload.originalTo || "").trim();
+    const originalCar = req.method === "DELETE" ? car : String(payload.originalCar || "").trim();
 
     if (!Number.isInteger(row) || row < 2) {
       return json({ ok: false, message: "Registreringen kunne ikke findes." }, 400);
@@ -223,7 +223,7 @@ export default async (req: Request) => {
         }, 409);
       }
     } catch (error) {
-      console.error("Rettelsen kunne ikke kontrolleres", error);
+      console.error("Ændringen kunne ikke kontrolleres", error);
       return json({ ok: false, message: "Registreringen kunne ikke kontrolleres." }, 502);
     }
 
@@ -238,7 +238,9 @@ export default async (req: Request) => {
       const response = await fetch(editUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ row, date, from, to, car, token: makeToken }),
+        body: JSON.stringify(req.method === "DELETE"
+          ? { row, date: "", from: "", to: "", car: "", token: makeToken }
+          : { row, date, from, to, car, token: makeToken }),
         redirect: "follow",
         signal: AbortSignal.timeout(15000)
       });
@@ -246,6 +248,10 @@ export default async (req: Request) => {
 
       if (!response.ok || result.ok !== true) {
         throw new Error(String(result.message || "Rettelsen kunne ikke gemmes."));
+      }
+
+      if (req.method === "DELETE") {
+        return json({ ok: true, deleted: true, message: "Registreringen er slettet." });
       }
 
       return json({ ok: true, updated: true, message: "Registreringen er rettet." });
