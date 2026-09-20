@@ -6,6 +6,12 @@ function env(name: string) {
   return Netlify.env.get(name) || process.env[name];
 }
 
+async function writeToken(url: string) {
+  const bytes = new TextEncoder().encode(url + "|koyr-write-v1");
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -152,8 +158,7 @@ export default async (req: Request) => {
         month,
         trips,
         canEdit: Boolean(
-          (env("KOYR_WRITE_URL") || env("GOOGLE_SCRIPT_URL")) &&
-          (env("KOYR_WRITE_TOKEN") || env("KOYR_MAKE_TOKEN"))
+          env("KOYR_WRITE_URL") || env("GOOGLE_SCRIPT_URL")
         )
       });
     } catch (error) {
@@ -223,7 +228,7 @@ export default async (req: Request) => {
     }
 
     const editUrl = env("KOYR_WRITE_URL") || env("GOOGLE_SCRIPT_URL");
-    const makeToken = env("KOYR_WRITE_TOKEN") || env("KOYR_MAKE_TOKEN");
+    const makeToken = editUrl ? await writeToken(editUrl) : "";
 
     if (!editUrl || !makeToken) {
       return json({ ok: false, message: "Rettefunktionen er ikke konfigureret endnu." }, 503);
@@ -274,7 +279,7 @@ export default async (req: Request) => {
   }
 
   const scriptUrl = env("KOYR_WRITE_URL") || env("GOOGLE_SCRIPT_URL");
-  const makeToken = env("KOYR_WRITE_TOKEN") || env("KOYR_MAKE_TOKEN");
+  const makeToken = scriptUrl ? await writeToken(scriptUrl) : "";
 
   if (!scriptUrl || !makeToken) {
     return json({
