@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f3e7d8">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="koyr-version" content="2026.09.20.8">
+  <meta name="koyr-version" content="2026.09.20.9">
   <title>Koyr · Skráset arbeiðsdag</title>
   <style>
     :root {
@@ -110,10 +110,20 @@
     }
 
     label {
-      display: block;
+      display: flex;
+      align-items: center;
+      gap: 7px;
       margin: 0 0 7px;
       font-size: 0.95rem;
       font-weight: 750;
+    }
+
+    .field-icon {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+      color: var(--blue);
+      stroke-width: 2.15;
     }
 
     input,
@@ -209,6 +219,27 @@
 
     button:hover { background: var(--blue-dark); }
     button:disabled { opacity: 0.62; cursor: wait; }
+
+    #submit-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+    }
+
+    .button-icon {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 20px;
+      stroke-width: 2.2;
+    }
+
+    .icon-sprite {
+      position: absolute;
+      width: 0;
+      height: 0;
+      overflow: hidden;
+    }
 
     .status {
       display: none;
@@ -370,6 +401,30 @@
   </style>
 </head>
 <body>
+  <svg class="icon-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <symbol id="icon-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 2v4M16 2v4M3 10h18"/>
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+      </symbol>
+      <symbol id="icon-start" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/>
+        <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>
+      </symbol>
+      <symbol id="icon-destination" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/>
+        <circle cx="12" cy="10" r="2.5"/>
+      </symbol>
+      <symbol id="icon-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m5 11 2-5h10l2 5M4 11h16a2 2 0 0 1 2 2v5H2v-5a2 2 0 0 1 2-2Z"/>
+        <path d="M5 18v2M19 18v2M6 14h.01M18 14h.01"/>
+      </symbol>
+      <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="m8 12 2.5 2.5L16 9"/>
+      </symbol>
+    </defs>
+  </svg>
   <main>
     <header>
       <div class="header-top">
@@ -381,7 +436,10 @@
 
     <form id="trip-form">
       <div class="field">
-        <label for="date">Dato</label>
+        <label for="date">
+          <svg class="field-icon" aria-hidden="true"><use href="#icon-calendar"></use></svg>
+          <span>Dato</span>
+        </label>
         <div class="date-control">
           <span id="date-display" class="date-display" aria-hidden="true"></span>
           <input id="date" name="date" type="date" required aria-label="Dato">
@@ -390,7 +448,10 @@
 
       <div class="route">
         <div class="field">
-          <label for="from">Fra</label>
+          <label for="from">
+            <svg class="field-icon" aria-hidden="true"><use href="#icon-start"></use></svg>
+            <span>Fra</span>
+          </label>
           <select id="from" name="from" required>
             <option value="">Vælg sted</option>
             <option>Hoyvík</option>
@@ -400,7 +461,10 @@
         </div>
 
         <div class="field">
-          <label for="to">Til</label>
+          <label for="to">
+            <svg class="field-icon" aria-hidden="true"><use href="#icon-destination"></use></svg>
+            <span>Til</span>
+          </label>
           <select id="to" name="to" required>
             <option value="">Vælg sted</option>
             <option>Hoyvík</option>
@@ -411,7 +475,10 @@
       </div>
 
       <div class="field">
-        <label for="car">Bil</label>
+        <label for="car">
+          <svg class="field-icon" aria-hidden="true"><use href="#icon-car"></use></svg>
+          <span>Bil</span>
+        </label>
         <select id="car" name="car" required>
           <option value="">Vælg bil</option>
           <option value="BP311">Katrins bil · BP311</option>
@@ -420,7 +487,10 @@
         </select>
       </div>
 
-      <button id="submit-button" type="submit">Goym túr</button>
+      <button id="submit-button" type="submit">
+        <svg class="button-icon" aria-hidden="true"><use href="#icon-check"></use></svg>
+        <span>Goym túr</span>
+      </button>
       <button id="cancel-button" class="cancel-button" type="button">Annuller rettelse</button>
       <p id="status" class="status" role="status" aria-live="polite"></p>
     </form>
@@ -447,6 +517,7 @@
     const fromInput = document.querySelector("#from");
     const toInput = document.querySelector("#to");
     const submitButton = document.querySelector("#submit-button");
+    const submitButtonLabel = submitButton.querySelector("span");
     const cancelButton = document.querySelector("#cancel-button");
     const statusBox = document.querySelector("#status");
     const refreshButton = document.querySelector("#refresh-button");
@@ -557,7 +628,7 @@
       fromInput.value = trip.from;
       toInput.value = trip.to;
       document.querySelector("#car").value = trip.car;
-      submitButton.textContent = "Goym broyting";
+      submitButtonLabel.textContent = "Goym broyting";
       cancelButton.style.display = "block";
       statusBox.className = "status";
       statusBox.textContent = "";
@@ -566,7 +637,7 @@
 
     function stopEditing() {
       editingTrip = null;
-      submitButton.textContent = "Goym túr";
+      submitButtonLabel.textContent = "Goym túr";
       cancelButton.style.display = "none";
     }
 
@@ -743,7 +814,7 @@
       }
 
       submitButton.disabled = true;
-      submitButton.textContent = "Goymir…";
+      submitButtonLabel.textContent = "Goymir…";
 
       try {
         const response = await fetch("/api/register-trip", {
@@ -776,7 +847,7 @@
         statusBox.textContent = error.message || "Turen kunne ikke gemmes. Prøv igen.";
       } finally {
         submitButton.disabled = false;
-        submitButton.textContent = editingTrip ? "Goym broyting" : "Goym túr";
+        submitButtonLabel.textContent = editingTrip ? "Goym broyting" : "Goym túr";
       }
     });
 
