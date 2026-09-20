@@ -148,7 +148,7 @@ export default async (req: Request) => {
         month,
         trips,
         canEdit: Boolean(
-          Netlify.env.get("GOOGLE_SCRIPT_URL") &&
+          (Netlify.env.get("KOYR_WRITE_URL") || Netlify.env.get("GOOGLE_SCRIPT_URL")) &&
           Netlify.env.get("KOYR_MAKE_TOKEN")
         )
       });
@@ -218,7 +218,7 @@ export default async (req: Request) => {
       return json({ ok: false, message: "Registreringen kunne ikke kontrolleres." }, 502);
     }
 
-    const editUrl = Netlify.env.get("GOOGLE_SCRIPT_URL");
+    const editUrl = Netlify.env.get("KOYR_WRITE_URL") || Netlify.env.get("GOOGLE_SCRIPT_URL");
     const makeToken = Netlify.env.get("KOYR_MAKE_TOKEN");
 
     if (!editUrl || !makeToken) {
@@ -269,7 +269,7 @@ export default async (req: Request) => {
     console.warn("Dobbeltkontrollen kunne ikke gennemføres", error);
   }
 
-  const scriptUrl = Netlify.env.get("GOOGLE_SCRIPT_URL");
+  const scriptUrl = Netlify.env.get("KOYR_WRITE_URL") || Netlify.env.get("GOOGLE_SCRIPT_URL");
   const makeToken = Netlify.env.get("KOYR_MAKE_TOKEN");
 
   if (!scriptUrl || !makeToken) {
