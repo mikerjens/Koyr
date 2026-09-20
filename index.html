@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#174a7e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="koyr-version" content="2026.09.20.4">
+  <meta name="koyr-version" content="2026.09.20.5">
   <title>Koyr · Skráset arbeiðsdag</title>
   <style>
     :root {
@@ -98,7 +98,10 @@
       box-shadow: 0 18px 50px rgba(24, 48, 71, 0.10);
     }
 
-    .field { margin-bottom: 18px; }
+    .field {
+      min-width: 0;
+      margin-bottom: 18px;
+    }
 
     label {
       display: block;
@@ -118,11 +121,21 @@
 
     input,
     select {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
       padding: 0 14px;
       color: var(--ink);
       background: #fff;
       border: 1px solid var(--line);
       font-size: 16px;
+    }
+
+    input[type="date"] {
+      display: block;
+      inline-size: 100%;
+      max-inline-size: 100%;
+      min-inline-size: 0;
     }
 
     input:focus,
