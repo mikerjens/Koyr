@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#174a7e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="koyr-version" content="2026.09.20.5">
+  <meta name="koyr-version" content="2026.09.20.6">
   <title>Koyr · Skráset arbeiðsdag</title>
   <style>
     :root {
@@ -131,11 +131,51 @@
       font-size: 16px;
     }
 
-    input[type="date"] {
+    .date-control {
+      position: relative;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      min-height: 52px;
+      overflow: hidden;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    .date-control:focus-within {
+      outline: 3px solid rgba(23, 74, 126, 0.16);
+      border-color: var(--blue);
+    }
+
+    .date-display {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 52px;
+      padding: 0 14px;
+      font-size: 16px;
+      pointer-events: none;
+    }
+
+    .date-control input[type="date"] {
+      position: absolute;
+      inset: 0;
       display: block;
-      inline-size: 100%;
-      max-inline-size: 100%;
-      min-inline-size: 0;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      min-width: 0;
+      min-height: 0;
+      margin: 0;
+      padding: 0;
+      opacity: 0;
+      border: 0;
+      border-radius: 0;
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
     }
 
     input:focus,
@@ -336,7 +376,10 @@
     <form id="trip-form">
       <div class="field">
         <label for="date">Dato</label>
-        <input id="date" name="date" type="date" required>
+        <div class="date-control">
+          <span id="date-display" class="date-display" aria-hidden="true"></span>
+          <input id="date" name="date" type="date" required aria-label="Dato">
+        </div>
       </div>
 
       <div class="route">
@@ -394,6 +437,7 @@
     const form = document.querySelector("#trip-form");
     const appUpdateButton = document.querySelector("#app-update-button");
     const dateInput = document.querySelector("#date");
+    const dateDisplay = document.querySelector("#date-display");
     const fromInput = document.querySelector("#from");
     const toInput = document.querySelector("#to");
     const submitButton = document.querySelector("#submit-button");
@@ -426,7 +470,23 @@
       timeZone: "UTC"
     });
 
+    function updateDateDisplay() {
+      if (!dateInput.value) {
+        dateDisplay.textContent = "Vælg dato";
+        return;
+      }
+
+      const [year, month, day] = dateInput.value.split("-").map(Number);
+      dateDisplay.textContent = new Intl.DateTimeFormat("da-DK", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC"
+      }).format(new Date(Date.UTC(year, month - 1, day, 12)));
+    }
+
     dateInput.value = faroeDate;
+    updateDateDisplay();
 
     function reloadApp() {
       appUpdateButton.disabled = true;
@@ -487,6 +547,7 @@
     function beginEdit(trip) {
       editingTrip = trip;
       dateInput.value = trip.date;
+      updateDateDisplay();
       fromInput.value = trip.from;
       toInput.value = trip.to;
       document.querySelector("#car").value = trip.car;
@@ -643,7 +704,10 @@
       }
     }
 
-    dateInput.addEventListener("change", () => loadRegisteredDays());
+    dateInput.addEventListener("change", () => {
+      updateDateDisplay();
+      loadRegisteredDays();
+    });
     refreshButton.addEventListener("click", () => loadRegisteredDays(true));
     cancelButton.addEventListener("click", stopEditing);
 
