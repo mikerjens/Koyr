@@ -17,6 +17,7 @@
       --line: #d7e0e8;
       --success: #17663a;
       --error: #a42929;
+      --warning: #8a5100;
     }
 
     * { box-sizing: border-box; }
@@ -187,15 +188,19 @@
     }
 
     .day-row {
+      display: grid;
+      gap: 7px;
+      padding: 13px 14px;
+      background: #f5f8fb;
+      border: 1px solid #e4ebf1;
+      border-radius: 11px;
+    }
+
+    .day-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      min-height: 44px;
-      padding: 10px 12px;
-      background: #f5f8fb;
-      border: 1px solid #e4ebf1;
-      border-radius: 11px;
     }
 
     .day-date {
@@ -203,11 +208,36 @@
       text-transform: capitalize;
     }
 
-    .day-count {
-      color: var(--success);
+    .trip-details {
+      color: var(--muted);
       font-size: 0.88rem;
+      line-height: 1.4;
+    }
+
+    .trip-status {
+      font-size: 0.86rem;
       font-weight: 800;
-      white-space: nowrap;
+    }
+
+    .trip-status.documented { color: var(--success); }
+    .trip-status.check { color: var(--error); }
+    .trip-status.no-tunnel { color: var(--muted); }
+
+    .edit-button,
+    .cancel-button {
+      width: auto;
+      min-height: 36px;
+      margin: 0;
+      padding: 0 12px;
+      box-shadow: none;
+      font-size: 0.82rem;
+    }
+
+    .cancel-button {
+      display: none;
+      margin-top: 10px;
+      color: var(--blue);
+      background: var(--blue-soft);
     }
 
     .days-message {
@@ -281,6 +311,7 @@
       </div>
 
       <button id="submit-button" type="submit">Gem tur</button>
+      <button id="cancel-button" class="cancel-button" type="button">Annuller rettelse</button>
       <p id="status" class="status" role="status" aria-live="polite"></p>
     </form>
 
@@ -304,11 +335,14 @@
     const fromInput = document.querySelector("#from");
     const toInput = document.querySelector("#to");
     const submitButton = document.querySelector("#submit-button");
+    const cancelButton = document.querySelector("#cancel-button");
     const statusBox = document.querySelector("#status");
     const refreshButton = document.querySelector("#refresh-button");
     const monthLabel = document.querySelector("#month-label");
     const registeredDays = document.querySelector("#registered-days");
     let loadedMonth = "";
+    let editingTrip = null;
+    let editingEnabled = false;
 
     const faroeDate = new Intl.DateTimeFormat("en-CA", {
       timeZone: "Atlantic/Faroe",
@@ -345,10 +379,48 @@
       return dayFormatter.format(new Date(date + "T12:00:00Z"));
     }
 
-    function renderDays(days) {
+    function carName(registration) {
+      const names = {
+        BP311: "Katrins bil",
+        FA838: "BMW",
+        DV871: "Toyota"
+      };
+      return (names[registration] || "Bil") + " · " + registration;
+    }
+
+    function statusPresentation(value) {
+      if (value === "Dokumenteret") {
+        return { className: "documented", text: "Tunnelpassage dokumenteret" };
+      }
+      if (value === "Ingen tunnel") {
+        return { className: "no-tunnel", text: "Ingen tunnel nødvendig" };
+      }
+      return { className: "check", text: "Ingen passage fundet. Kontrollér bilen." };
+    }
+
+    function beginEdit(trip) {
+      editingTrip = trip;
+      dateInput.value = trip.date;
+      fromInput.value = trip.from;
+      toInput.value = trip.to;
+      document.querySelector("#car").value = trip.car;
+      submitButton.textContent = "Gem rettelse";
+      cancelButton.style.display = "block";
+      statusBox.className = "status";
+      statusBox.textContent = "";
+      form.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function stopEditing() {
+      editingTrip = null;
+      submitButton.textContent = "Gem tur";
+      cancelButton.style.display = "none";
+    }
+
+    function renderTrips(trips) {
       registeredDays.replaceChildren();
 
-      if (!days.length) {
+      if (!trips.length) {
         const message = document.createElement("p");
         message.className = "days-message";
         message.textContent = "Der er endnu ingen registrerede ture i denne måned.";
@@ -356,19 +428,38 @@
         return;
       }
 
-      for (const day of days) {
+      for (const trip of trips) {
         const row = document.createElement("div");
         row.className = "day-row";
 
+        const top = document.createElement("div");
+        top.className = "day-top";
+
         const date = document.createElement("span");
         date.className = "day-date";
-        date.textContent = displayDate(day.date);
+        date.textContent = displayDate(trip.date);
 
-        const count = document.createElement("span");
-        count.className = "day-count";
-        count.textContent = "✓ " + day.count + (day.count === 1 ? " tur" : " ture");
+        top.append(date);
 
-        row.append(date, count);
+        if (editingEnabled) {
+          const edit = document.createElement("button");
+          edit.className = "edit-button";
+          edit.type = "button";
+          edit.textContent = "Ret";
+          edit.addEventListener("click", () => beginEdit(trip));
+          top.append(edit);
+        }
+
+        const details = document.createElement("div");
+        details.className = "trip-details";
+        details.textContent = trip.from + " → " + trip.to + " · " + carName(trip.car);
+
+        const status = statusPresentation(trip.status);
+        const statusLine = document.createElement("div");
+        statusLine.className = "trip-status " + status.className;
+        statusLine.textContent = status.text;
+
+        row.append(top, details, statusLine);
         registeredDays.append(row);
       }
     }
@@ -395,7 +486,8 @@
           throw new Error(result.message || "Oversigten kunne ikke hentes.");
         }
 
-        renderDays(Array.isArray(result.days) ? result.days : []);
+        editingEnabled = result.canEdit === true;
+        renderTrips(Array.isArray(result.trips) ? result.trips : []);
       } catch (error) {
         registeredDays.innerHTML = "";
         const message = document.createElement("p");
@@ -409,6 +501,7 @@
 
     dateInput.addEventListener("change", () => loadRegisteredDays());
     refreshButton.addEventListener("click", () => loadRegisteredDays(true));
+    cancelButton.addEventListener("click", stopEditing);
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -416,6 +509,16 @@
       statusBox.textContent = "";
 
       const data = Object.fromEntries(new FormData(form));
+
+      if (editingTrip) {
+        Object.assign(data, {
+          row: editingTrip.row,
+          originalDate: editingTrip.date,
+          originalFrom: editingTrip.from,
+          originalTo: editingTrip.to,
+          originalCar: editingTrip.car
+        });
+      }
 
       if (data.from === data.to) {
         statusBox.className = "status error";
@@ -428,7 +531,7 @@
 
       try {
         const response = await fetch("/api/register-trip", {
-          method: "POST",
+          method: editingTrip ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data)
         });
@@ -440,11 +543,14 @@
         }
 
         statusBox.className = "status success";
-        statusBox.textContent = result.duplicate
-          ? "Turen var allerede registreret."
-          : "Turen er gemt i arbejdsarket.";
+        statusBox.textContent = result.updated
+          ? "Registreringen er rettet."
+          : result.duplicate
+            ? "Turen var allerede registreret."
+            : "Turen er gemt i arbejdsarket.";
 
-        if (!result.duplicate) {
+        if (result.updated || !result.duplicate) {
+          stopEditing();
           fromInput.value = "";
           toInput.value = "";
           await loadRegisteredDays(true);
@@ -454,7 +560,7 @@
         statusBox.textContent = error.message || "Turen kunne ikke gemmes. Prøv igen.";
       } finally {
         submitButton.disabled = false;
-        submitButton.textContent = "Gem tur";
+        submitButton.textContent = editingTrip ? "Gem rettelse" : "Gem tur";
       }
     });
 

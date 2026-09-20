@@ -88,11 +88,25 @@ async function readSheetRows() {
     throw new Error("Arbejdsarket returnerede et ugyldigt svar.");
   }
 
-  return extractValues(parsed).map((row) => row.map((cell) => String(cell ?? "").trim()));
+  if (parsed && typeof parsed === "object") {
+    const record = parsed as Record<string, unknown>;
+    const trips = extractValues(record.trips);
+    const statuses = extractValues(record.statuses);
+
+    if (trips.length) {
+      return trips.map((row, index) => [
+        ...row.slice(0, 4),
+        statuses[index]?.[0] ?? ""
+      ].map((cell) => String(cell ?? "").trim()));
+    }
+  }
+
+  return extractValues(parsed)
+    .map((row) => row.map((cell) => String(cell ?? "").trim()));
 }
 
 export default async (req: Request) => {
-  if (req.method !== "GET" && req.method !== "POST") {
+  if (req.method !== "GET" && req.method !== "POST" && req.method !== "PUT") {
     return json({ ok: false, message: "Metoden er ikke tilladt." }, 405);
   }
 
@@ -110,20 +124,34 @@ export default async (req: Request) => {
 
     try {
       const rows = await readSheetRows();
-      const counts = new Map<string, number>();
+      const trips = [];
 
-      for (const row of rows.slice(1)) {
+      for (const [index, row] of rows.slice(1).entries()) {
         const date = normalizeSheetDate(row[0]);
 
         if (date.startsWith(month + "-")) {
-          counts.set(date, (counts.get(date) || 0) + 1);
+          trips.push({
+            row: index + 2,
+            date,
+            from: row[1] || "",
+            to: row[2] || "",
+            car: row[3] || "",
+            status: row[4] || "Kontrolleres"
+          });
         }
       }
 
-      const days = Array.from(counts, ([date, count]) => ({ date, count }))
-        .sort((a, b) => a.date.localeCompare(b.date));
+      trips.sort((a, b) => a.date.localeCompare(b.date) || a.row - b.row);
 
-      return json({ ok: true, month, days });
+      return json({
+        ok: true,
+        month,
+        trips,
+        canEdit: Boolean(
+          Netlify.env.get("GOOGLE_SCRIPT_URL") &&
+          Netlify.env.get("KOYR_MAKE_TOKEN")
+        )
+      });
     } catch (error) {
       console.error("Oversigten kunne ikke hentes", error);
       return json({
@@ -159,6 +187,68 @@ export default async (req: Request) => {
     return json({ ok: false, message: "Vælg en gyldig bil." }, 400);
   }
 
+  if (req.method === "PUT") {
+    const row = Number(payload.row);
+    const originalDate = String(payload.originalDate || "").trim();
+    const originalFrom = String(payload.originalFrom || "").trim();
+    const originalTo = String(payload.originalTo || "").trim();
+    const originalCar = String(payload.originalCar || "").trim();
+
+    if (!Number.isInteger(row) || row < 2) {
+      return json({ ok: false, message: "Registreringen kunne ikke findes." }, 400);
+    }
+
+    try {
+      const rows = await readSheetRows();
+      const current = rows[row - 1] || [];
+
+      if (
+        normalizeSheetDate(current[0]) !== originalDate ||
+        current[1] !== originalFrom ||
+        current[2] !== originalTo ||
+        current[3] !== originalCar
+      ) {
+        return json({
+          ok: false,
+          message: "Registreringen er ændret siden sidst. Tryk Opdater og prøv igen."
+        }, 409);
+      }
+    } catch (error) {
+      console.error("Rettelsen kunne ikke kontrolleres", error);
+      return json({ ok: false, message: "Registreringen kunne ikke kontrolleres." }, 502);
+    }
+
+    const editUrl = Netlify.env.get("GOOGLE_SCRIPT_URL");
+    const makeToken = Netlify.env.get("KOYR_MAKE_TOKEN");
+
+    if (!editUrl || !makeToken) {
+      return json({ ok: false, message: "Rettefunktionen er ikke konfigureret endnu." }, 503);
+    }
+
+    try {
+      const response = await fetch(editUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ row, date, from, to, car, token: makeToken }),
+        redirect: "follow",
+        signal: AbortSignal.timeout(15000)
+      });
+      const result = await response.json();
+
+      if (!response.ok || result.ok !== true) {
+        throw new Error(String(result.message || "Rettelsen kunne ikke gemmes."));
+      }
+
+      return json({ ok: true, updated: true, message: "Registreringen er rettet." });
+    } catch (error) {
+      console.error("Rettelse fejlede", error);
+      return json({
+        ok: false,
+        message: error instanceof Error ? error.message : "Rettelsen kunne ikke gemmes."
+      }, 502);
+    }
+  }
+
   try {
     const rows = await readSheetRows();
     const duplicate = rows.slice(1).some((row) =>
@@ -180,8 +270,9 @@ export default async (req: Request) => {
   }
 
   const scriptUrl = Netlify.env.get("GOOGLE_SCRIPT_URL");
+  const makeToken = Netlify.env.get("KOYR_MAKE_TOKEN");
 
-  if (!scriptUrl) {
+  if (!scriptUrl || !makeToken) {
     return json({
       ok: false,
       message: "Forbindelsen til arbejdsarket er ikke konfigureret."
@@ -192,7 +283,7 @@ export default async (req: Request) => {
     const response = await fetch(scriptUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date, from, to, car }),
+      body: JSON.stringify({ date, from, to, car, token: makeToken }),
       redirect: "follow",
       signal: AbortSignal.timeout(15000)
     });
