@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#f3e7d8">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="koyr-version" content="2026.09.20.9">
-  <title>Koyr · Skráset arbeiðsdag</title>
+  <meta name="koyr-version" content="2026.09.20.10">
+  <title>Tónatúrar · Skráset tímar</title>
   <style>
     :root {
       color-scheme: light;
@@ -53,12 +53,23 @@
     }
 
     .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
       margin: 0;
       color: var(--blue-dark);
       font-size: 0.78rem;
       font-weight: 800;
       letter-spacing: 0.12em;
       text-transform: uppercase;
+    }
+
+    .music-clef {
+      font-family: "Apple Symbols", "Noto Music", "Segoe UI Symbol", serif;
+      font-size: 1.45rem;
+      font-weight: 400;
+      line-height: 1;
+      transform: translateY(-1px);
     }
 
     .app-update-button {
@@ -428,10 +439,13 @@
   <main>
     <header>
       <div class="header-top">
-        <p class="eyebrow">Arbeiðsdagar</p>
+        <p class="eyebrow">
+          <span>Tónatúrar</span>
+          <span class="music-clef" aria-hidden="true">𝄞</span>
+        </p>
         <button id="app-update-button" class="app-update-button" type="button">Dagfør</button>
       </div>
-      <h1>Skráset túr</h1>
+      <h1>Skráset tímar</h1>
     </header>
 
     <form id="trip-form">
