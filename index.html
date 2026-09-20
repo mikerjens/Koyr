@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#174a7e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="koyr-version" content="2026.09.20.1">
   <title>Koyr · Registrer arbejdsdag</title>
   <style>
     :root {
@@ -37,13 +40,40 @@
 
     header { margin: 8px 2px 24px; }
 
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
     .eyebrow {
-      margin: 0 0 8px;
+      margin: 0;
       color: var(--blue);
       font-size: 0.78rem;
       font-weight: 800;
       letter-spacing: 0.12em;
       text-transform: uppercase;
+    }
+
+    .app-update-button {
+      width: auto;
+      min-height: 36px;
+      margin: 0;
+      padding: 0 12px;
+      color: var(--blue);
+      background: #fff;
+      border: 1px solid rgba(23, 74, 126, 0.18);
+      box-shadow: none;
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    .app-update-button:hover,
+    .app-update-button.update-available {
+      color: #fff;
+      background: var(--blue);
     }
 
     h1 {
@@ -283,7 +313,10 @@
 <body>
   <main>
     <header>
-      <p class="eyebrow">Katrins arbejdsdage</p>
+      <div class="header-top">
+        <p class="eyebrow">Katrins arbejdsdage</p>
+        <button id="app-update-button" class="app-update-button" type="button">Opdater app</button>
+      </div>
       <h1>Registrer en tur</h1>
       <p class="intro">Udfyld dato, rute og bil. Turen gemmes direkte i arbejdsarket.</p>
     </header>
@@ -347,6 +380,7 @@
 
   <script>
     const form = document.querySelector("#trip-form");
+    const appUpdateButton = document.querySelector("#app-update-button");
     const dateInput = document.querySelector("#date");
     const fromInput = document.querySelector("#from");
     const toInput = document.querySelector("#to");
@@ -381,6 +415,30 @@
     });
 
     dateInput.value = faroeDate;
+
+    function reloadApp() {
+      appUpdateButton.disabled = true;
+      appUpdateButton.textContent = "Opdaterer…";
+      window.location.replace("/?refresh=" + Date.now());
+    }
+
+    async function checkForAppUpdate() {
+      try {
+        const response = await fetch("/?version=" + Date.now(), { cache: "no-store" });
+        const html = await response.text();
+        const latest = html.match(/name="koyr-version" content="([^"]+)"/)?.[1];
+        const current = document.querySelector('meta[name="koyr-version"]')?.content;
+
+        if (latest && current && latest !== current) {
+          appUpdateButton.classList.add("update-available");
+          appUpdateButton.textContent = "Ny version klar";
+        }
+      } catch {
+        // Appen kan stadig bruges uden versionskontrol, hvis telefonen er offline.
+      }
+    }
+
+    appUpdateButton.addEventListener("click", reloadApp);
 
     function selectedMonth() {
       return dateInput.value.slice(0, 7);
@@ -639,6 +697,7 @@
     });
 
     loadRegisteredDays(true);
+    checkForAppUpdate();
   </script>
 </body>
 </html>
