@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#174a7e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="koyr-version" content="2026.09.20.6">
+  <meta name="koyr-version" content="2026.09.20.7">
   <title>Koyr · Skráset arbeiðsdag</title>
   <style>
     :root {
@@ -697,7 +697,9 @@
         registeredDays.innerHTML = "";
         const message = document.createElement("p");
         message.className = "days-message error";
-        message.textContent = error.message || "Oversigten kunne ikke hentes.";
+        message.textContent = error.message?.includes("expected pattern")
+          ? "Registreringerne kunne ikke hentes. Tryk på Dagfør og prøv igen."
+          : error.message || "Oversigten kunne ikke hentes.";
         registeredDays.append(message);
       } finally {
         refreshButton.disabled = false;
