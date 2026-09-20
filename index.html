@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#f3e7d8">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="koyr-version" content="2026.09.20.10">
-  <title>Tónatúrar · Skráset tímar</title>
+  <meta name="koyr-version" content="2026.09.20.11">
+  <title>Tónatúrar</title>
   <style>
     :root {
       color-scheme: light;
@@ -47,7 +47,7 @@
     .header-top {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-end;
       gap: 12px;
       margin-bottom: 8px;
     }
@@ -96,6 +96,16 @@
       font-size: clamp(1.9rem, 8vw, 2.6rem);
       line-height: 1.05;
       letter-spacing: -0.035em;
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-title .music-clef {
+      font-size: 1em;
     }
 
     .intro {
@@ -439,13 +449,12 @@
   <main>
     <header>
       <div class="header-top">
-        <p class="eyebrow">
-          <span>Tónatúrar</span>
-          <span class="music-clef" aria-hidden="true">𝄞</span>
-        </p>
         <button id="app-update-button" class="app-update-button" type="button">Dagfør</button>
       </div>
-      <h1>Skráset tímar</h1>
+      <h1 class="brand-title">
+        <span>TÓNATÚRAR</span>
+        <span class="music-clef" aria-hidden="true">𝄞</span>
+      </h1>
     </header>
 
     <form id="trip-form">
