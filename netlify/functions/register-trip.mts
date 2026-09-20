@@ -2,6 +2,10 @@
 const LOCATIONS = new Set(["Hoyvík", "Giljanes", "Sørvágur"]);
 const CARS = new Set(["BP311", "FA838", "DV871"]);
 
+function env(name: string) {
+  return Netlify.env.get(name) || process.env[name];
+}
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -62,7 +66,7 @@ function extractValues(input: unknown): unknown[][] {
 }
 
 async function readSheetRows() {
-  const listUrl = Netlify.env.get("GOOGLE_LIST_URL");
+  const listUrl = env("GOOGLE_LIST_URL");
 
   if (!listUrl) {
     throw new Error("Læseforbindelsen til arbejdsarket er ikke konfigureret.");
@@ -148,8 +152,8 @@ export default async (req: Request) => {
         month,
         trips,
         canEdit: Boolean(
-          (Netlify.env.get("KOYR_WRITE_URL") || Netlify.env.get("GOOGLE_SCRIPT_URL")) &&
-          Netlify.env.get("KOYR_MAKE_TOKEN")
+          (env("KOYR_WRITE_URL") || env("GOOGLE_SCRIPT_URL")) &&
+          env("KOYR_MAKE_TOKEN")
         )
       });
     } catch (error) {
@@ -218,8 +222,8 @@ export default async (req: Request) => {
       return json({ ok: false, message: "Registreringen kunne ikke kontrolleres." }, 502);
     }
 
-    const editUrl = Netlify.env.get("KOYR_WRITE_URL") || Netlify.env.get("GOOGLE_SCRIPT_URL");
-    const makeToken = Netlify.env.get("KOYR_MAKE_TOKEN");
+    const editUrl = env("KOYR_WRITE_URL") || env("GOOGLE_SCRIPT_URL");
+    const makeToken = env("KOYR_MAKE_TOKEN");
 
     if (!editUrl || !makeToken) {
       return json({ ok: false, message: "Rettefunktionen er ikke konfigureret endnu." }, 503);
@@ -269,8 +273,8 @@ export default async (req: Request) => {
     console.warn("Dobbeltkontrollen kunne ikke gennemføres", error);
   }
 
-  const scriptUrl = Netlify.env.get("KOYR_WRITE_URL") || Netlify.env.get("GOOGLE_SCRIPT_URL");
-  const makeToken = Netlify.env.get("KOYR_MAKE_TOKEN");
+  const scriptUrl = env("KOYR_WRITE_URL") || env("GOOGLE_SCRIPT_URL");
+  const makeToken = env("KOYR_MAKE_TOKEN");
 
   if (!scriptUrl || !makeToken) {
     return json({
