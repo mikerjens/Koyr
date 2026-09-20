@@ -1,4 +1,4 @@
-// Koyr mobilregistrering · production
+// Koyr mobilregistrering · all contexts
 const LOCATIONS = new Set(["Hoyvík", "Giljanes", "Sørvágur"]);
 const CARS = new Set(["BP311", "FA838", "DV871"]);
 
